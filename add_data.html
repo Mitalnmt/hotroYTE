@@ -29,8 +29,14 @@
         <input id="name" required placeholder="Ví dụ: Paracetamol">
       </div>
       <div class="row">
-        <label>Nhóm thuốc</label>
-        <input id="category" placeholder="Ví dụ: Giảm đau, hạ sốt">
+        <label>Tags thuốc</label>
+        <div id="tagsContainer" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+          <!-- Tags will be added here dynamically -->
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <input id="newTagInput" placeholder="Nhập tag mới..." style="flex: 1;">
+          <button type="button" id="addTagBtn" class="btn">+ Thêm tag</button>
+        </div>
       </div>
       <div class="row">
         <label>Mô tả (sẽ chỉnh bằng TinyMCE bên dưới)</label>
@@ -48,19 +54,6 @@
         <label>Chống chỉ định (mỗi dòng 1 mục)</label>
         <textarea id="contraindication" rows="3"></textarea>
       </div>
-      <div class="row">
-        <label>Tương tác thuốc</label>
-        <textarea id="interaction" rows="3" style="display:none"></textarea>
-      </div>
-      <div class="row">
-        <label>Phác đồ điều trị</label>
-        <textarea id="treatment" rows="3" style="display:none"></textarea>
-      </div>
-
-      <div class="row">
-        <label>Danh sách hình ảnh (mỗi dòng 1 URL) - sẽ chỉnh bằng TinyMCE</label>
-        <textarea id="images" rows="3" style="display:none"></textarea>
-      </div>
 
       <div class="row">
         <label>Ảnh thuốc (upload hoặc dán link)</label>
@@ -69,10 +62,6 @@
         <img id="preview" class="preview" hidden>
       </div>
 
-      <div class="row">
-        <label>Link hình nền card (tùy chọn)</label>
-        <input id="bgImage" placeholder="URL hình nền thẻ card (hiển thị ở trang chủ)">
-      </div>
 
       <button type="submit" class="btn primary">💾 Lưu thuốc vào Database</button>
     </form>
@@ -80,7 +69,7 @@
     <section id="drugList">
       <h3>📚 Danh sách thuốc hiện có</h3>
       <table id="drugTable">
-        <thead><tr><th>Tên</th><th>Nhóm</th><th>Slug</th></tr></thead>
+        <thead><tr><th>Tên</th><th>Tags</th><th>Slug</th></tr></thead>
         <tbody></tbody>
       </table>
     </section>
@@ -130,71 +119,74 @@
     editorHost.style.marginTop = '12px';
     editorHost.innerHTML = `
       <div class="row">
-        <label>Chọn phần cần chỉnh sửa bằng TinyMCE</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button type="button" class="btn" data-sec="overview">Tổng quan</button>
-          <button type="button" class="btn" data-sec="interaction">Tương tác</button>
-          <button type="button" class="btn" data-sec="treatment">Phác đồ</button>
-          <button type="button" class="btn" data-sec="images">Hình ảnh</button>
-        </div>
+        <label>Chỉnh sửa mô tả chi tiết bằng TinyMCE</label>
       </div>
       <textarea id="richEditor" rows="10"></textarea>
       <div style="margin-top:8px;display:flex;gap:8px">
-        <button type="button" class="btn primary" id="applyEditorBtn">Áp dụng vào phần đang chọn</button>
+        <button type="button" class="btn primary" id="applyEditorBtn">Áp dụng mô tả</button>
       </div>
     `;
     form.insertBefore(editorHost, form.querySelector('button[type="submit"]').parentElement);
 
-    let currentSection = 'overview';
+    // Tags management
+    let selectedTags = [];
+    const tagsContainer = document.getElementById('tagsContainer');
+    const newTagInput = document.getElementById('newTagInput');
+    const addTagBtn = document.getElementById('addTagBtn');
 
-    function htmlFromLines(lines){
-      if(!Array.isArray(lines)) return '';
-      if(!lines.length) return '';
-      return `<ul>` + lines.map(x=>`<li>${x}</li>`).join('') + `</ul>`;
+    function createTagElement(tag) {
+      const tagEl = document.createElement('span');
+      tagEl.className = 'tag';
+      tagEl.style.cssText = 'background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 16px; font-size: 12px; display: flex; align-items: center; gap: 4px;';
+      tagEl.innerHTML = `${tag} <span style="cursor: pointer; font-weight: bold;" onclick="removeTag('${tag}')">×</span>`;
+      return tagEl;
     }
 
-    function linesFromHtml(html){
-      const tmp = document.createElement('div');
-      tmp.innerHTML = html || '';
-      const lis = [...tmp.querySelectorAll('li')];
-      if(lis.length) return lis.map(li=>li.textContent.trim()).filter(Boolean);
-      // Fallback: split by newline
-      return (tmp.textContent||'').split('\n').map(s=>s.trim()).filter(Boolean);
-    }
-
-    function loadSectionToEditor(section){
-      currentSection = section;
-      let content = '';
-      if(section==='overview'){
-        content = form.description.value || '';
-      }else if(section==='interaction'){
-        content = htmlFromLines(form.interaction.value.split('\n').filter(Boolean));
-      }else if(section==='treatment'){
-        content = htmlFromLines(form.treatment.value.split('\n').filter(Boolean));
-      }else if(section==='images'){
-        // show as list of URLs
-        content = htmlFromLines((form.images?.value||'').split('\n').filter(Boolean));
+    function addTag(tag) {
+      if (tag && !selectedTags.includes(tag)) {
+        selectedTags.push(tag);
+        tagsContainer.appendChild(createTagElement(tag));
+        newTagInput.value = '';
       }
-      tinymce.get('richEditor')?.setContent(content || '');
     }
 
-    function applyEditorToSection(){
+    function removeTag(tag) {
+      selectedTags = selectedTags.filter(t => t !== tag);
+      renderTags();
+    }
+
+    function renderTags() {
+      tagsContainer.innerHTML = '';
+      selectedTags.forEach(tag => {
+        tagsContainer.appendChild(createTagElement(tag));
+      });
+    }
+
+    // Make removeTag globally accessible
+    window.removeTag = removeTag;
+
+    addTagBtn.addEventListener('click', () => {
+      const tag = newTagInput.value.trim();
+      if (tag) addTag(tag);
+    });
+
+    newTagInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const tag = newTagInput.value.trim();
+        if (tag) addTag(tag);
+      }
+    });
+
+    function loadDescriptionToEditor(){
+      const content = form.description.value || '';
+      tinymce.get('richEditor')?.setContent(content);
+    }
+
+    function applyEditorToDescription(){
       const html = tinymce.get('richEditor')?.getContent() || '';
-      if(currentSection==='overview'){
-        form.description.value = html;
-      }else if(currentSection==='interaction'){
-        form.interaction.value = linesFromHtml(html).join('\n');
-      }else if(currentSection==='treatment'){
-        form.treatment.value = linesFromHtml(html).join('\n');
-      }else if(currentSection==='images'){
-        const urls = linesFromHtml(html);
-        if(!form.images){
-          const ta = document.getElementById('images');
-          form.appendChild(ta);
-        }
-        document.getElementById('images').value = urls.join('\n');
-      }
-      alert('Đã áp dụng nội dung cho phần: ' + currentSection);
+      form.description.value = html;
+      alert('Đã áp dụng mô tả');
     }
 
     // Init TinyMCE
@@ -205,16 +197,10 @@
       toolbar:'undo redo | bold italic underline | bullist numlist | link image | table | removeformat | code fullscreen',
       height: 320
     }).then(()=>{
-      loadSectionToEditor('overview');
+      loadDescriptionToEditor();
     });
 
-    editorHost.querySelectorAll('button[data-sec]').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        applyEditorToSection();
-        loadSectionToEditor(btn.dataset.sec);
-      });
-    });
-    editorHost.querySelector('#applyEditorBtn').addEventListener('click', applyEditorToSection);
+    editorHost.querySelector('#applyEditorBtn').addEventListener('click', applyEditorToDescription);
 
     const editingSlug = getQueryParam('slug');
 
@@ -243,7 +229,8 @@
       if(!snap.exists()) return;
       Object.entries(snap.val()).forEach(([slug, v])=>{
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td><a href=\"./add_data.html?slug=${slug}\">${v.name}</a></td><td>${v.category||''}</td><td>${slug}</td>`;
+        const tagsDisplay = Array.isArray(v.tags) ? v.tags.join(', ') : '';
+        tr.innerHTML = `<td><a href=\"./add_data.html?slug=${slug}\">${v.name}</a></td><td>${tagsDisplay}</td><td>${slug}</td>`;
         tr.addEventListener('click', (e)=>{
           if(e.target.closest('a')) return;
           window.location.href = `./add_data.html?slug=${slug}`;
@@ -258,19 +245,17 @@
       if(!snap.exists()) return;
       const d = snap.val();
       form.name.value = d.name || '';
-      form.category.value = d.category || '';
+      
+      // Load tags
+      selectedTags = Array.isArray(d.tags) ? d.tags : [];
+      renderTags();
+      
       const desc = d.overview?.description || '';
       form.description.value = desc; // keep HTML for TinyMCE
       form.composition.value = d.overview?.composition || '';
       form.indication.value = Array.isArray(d.overview?.indication)? d.overview.indication.join('\n') : '';
       form.contraindication.value = Array.isArray(d.overview?.contraindication)? d.overview.contraindication.join('\n') : '';
-      form.interaction.value = Array.isArray(d.interaction)? d.interaction.join('\n') : '';
-      form.treatment.value = Array.isArray(d.treatment)? d.treatment.join('\n') : '';
-      const imagesArr = Array.isArray(d.images)? d.images : [];
-      const imagesTa = document.getElementById('images');
-      imagesTa.value = imagesArr.join('\n');
       if(d.image){ preview.src = d.image; preview.hidden = false; imageUrl.value = d.image; }
-      if(d.bgImage){ bgImageInput.value = d.bgImage; }
       headerTitle && (headerTitle.textContent = '🧾 Chỉnh sửa thuốc');
       const submitBtn = form.querySelector('button[type="submit"]');
       submitBtn && (submitBtn.textContent = '💾 Cập nhật thuốc');
@@ -281,40 +266,44 @@
       e.preventDefault();
       const name = form.name.value.trim();
       const slug = editingSlug || toSlug(name);
-      const category = form.category.value.trim();
+      
       // Ensure editor content saved back
-      applyEditorToSection();
+      applyEditorToDescription();
       const description = form.description.value.trim();
       const composition = form.composition.value.trim();
       const indication = form.indication.value.split('\n').filter(Boolean);
       const contraindication = form.contraindication.value.split('\n').filter(Boolean);
-      const interaction = form.interaction.value.split('\n').filter(Boolean);
-      const treatment = form.treatment.value.split('\n').filter(Boolean);
-      const images = (document.getElementById('images').value||'').split('\n').map(s=>s.trim()).filter(Boolean);
-      const bgImage = bgImageInput.value.trim();
 
       let img = imageUrl.value.trim();
       if(imageFile.files[0]) img = await uploadImageIfNeeded(imageFile.files[0]);
 
       if(!name){ alert('Vui lòng nhập tên thuốc'); return; }
+      if(selectedTags.length === 0){ alert('Vui lòng thêm ít nhất 1 tag'); return; }
 
       const drugData = {
-        name, category, image: img||'',
+        name, 
+        tags: selectedTags,
+        image: img||'',
         overview:{
           description: description || '',
           composition, indication, contraindication
         },
-        interaction, treatment,
-        images,
-        bgImage,
-        keywords:[slug, name.toLowerCase()]
+        keywords:[slug, name.toLowerCase(), ...selectedTags]
       };
 
+      // Save tags to database for future search
+      for(const tag of selectedTags) {
+        await set(dbRef(db, `tags/${tag}`), true);
+      }
+
       await set(dbRef(db, `drugs/${slug}`), drugData);
-      await set(dbRef(db, `drug_names/${slug}`), { name, category, image: img||'', bgImage });
+      await set(dbRef(db, `drug_names/${slug}`), { name, tags: selectedTags, image: img||'' });
 
       alert('✅ Đã lưu thuốc: ' + name);
-      form.reset(); preview.hidden = true;
+      form.reset(); 
+      preview.hidden = true;
+      selectedTags = [];
+      renderTags();
       loadDrugList();
       
       // Redirect to index page to show updated data
