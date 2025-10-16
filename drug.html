@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Chi tiết thuốc - Tra cứu thuốc y tế</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Thông tin chi tiết thuốc, tổng quan và hình ảnh.">
+  <meta property="og:title" content="Chi tiết thuốc">
+  <meta property="og:description" content="Tổng quan và hình ảnh thuốc.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-content detail-header">
+      <button id="backBtn" class="btn ghost" type="button" aria-label="Quay lại">
+        ← Quay lại
+      </button>
+      <div class="title-wrap">
+        <h1 id="drugName" class="title skeleton skeleton-text">Đang tải...</h1>
+        <p id="drugCategory" class="subtitle skeleton skeleton-text"> </p>
+      </div>
+      <div class="header-actions">
+        <a id="editDrugBtn" class="btn secondary" href="#" hidden>Chỉnh sửa</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container detail-container">
+    <section class="hero">
+      <div class="hero-image skeleton">
+        <img id="drugImage" alt="" loading="lazy" />
+      </div>
+    </section>
+
+    <section id="tabs" class="tabs" data-mode="tabs">
+      <div class="tab-list" role="tablist" aria-label="Thông tin thuốc">
+        <button class="tab-btn" role="tab" aria-selected="true" aria-controls="tab-overview" id="tabbtn-overview">Tổng quan</button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-images" id="tabbtn-images">Hình ảnh</button>
+      </div>
+
+      <div id="tab-overview" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-overview">
+        <div id="overviewDesc" class="rich-content skeleton"></div>
+        <div class="split two">
+          <div>
+            <h3>Thành phần</h3>
+            <table id="compositionTable" class="info-table skeleton"></table>
+          </div>
+          <div class="stack">
+            <div>
+              <h3>Chỉ định</h3>
+              <ul id="indicationList" class="bullet-list skeleton"></ul>
+            </div>
+            <div>
+              <h3>Chống chỉ định</h3>
+              <ul id="contraList" class="bullet-list skeleton"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-images" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-images" hidden>
+        <div id="imageGallery" class="gallery skeleton"></div>
+      </div>
+    </section>
+
+    <div id="errorBox" class="error" hidden>
+      Không tìm thấy thuốc. Bạn có thể quay lại và thử tìm kiếm.
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <small>© 2025 Tra cứu thuốc y tế</small>
+  </footer>
+
+  <!-- Firebase CDN + Detail Application -->
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getDatabase } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-analytics.js";
+    import { get, ref, child } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js';
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDqdWux9ISGgG9dJIz_BuUTg2akiUYM14c",
+      authDomain: "tracuuyte-7061a.firebaseapp.com",
+      databaseURL: "https://tracuuyte-7061a-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "tracuuyte-7061a",
+      storageBucket: "tracuuyte-7061a.firebasestorage.app",
+      messagingSenderId: "837205769673",
+      appId: "1:837205769673:web:45371c7b8f5efce4b1fc18",
+      measurementId: "G-69TJE53D20"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const analytics = getAnalytics(app);
+
+    // ============== Detail Application Code ==============
+    
+    // Utility functions
+    function getQueryParam(name) {
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name);
+    }
+
+    // Very basic sanitizer for known-safe HTML subset
+    function safeHTML(html) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html || '';
+      // Remove scripts and event handlers
+      tmp.querySelectorAll('script, iframe, object, embed').forEach(n => n.remove());
+      tmp.querySelectorAll('*').forEach(el => {
+        [...el.attributes].forEach(attr => {
+          const a = attr.name.toLowerCase();
+          if (a.startsWith('on')) el.removeAttribute(attr.name);
+          if (['srcdoc'].includes(a)) el.removeAttribute(attr.name);
+          if (a === 'href' && /^javascript:/i.test(attr.value)) el.removeAttribute(attr.name);
+        });
+      });
+      return tmp.innerHTML;
+    }
+
+    // DOM elements
+    const backBtn = document.getElementById('backBtn');
+    const nameEl = document.getElementById('drugName');
+    const catEl = document.getElementById('drugCategory');
+    const imgEl = document.getElementById('drugImage');
+
+    const overviewDesc = document.getElementById('overviewDesc');
+    const compTable = document.getElementById('compositionTable');
+    const indicationList = document.getElementById('indicationList');
+    const contraList = document.getElementById('contraList');
+
+    const gallery = document.getElementById('imageGallery');
+
+    const errorBox = document.getElementById('errorBox');
+
+    const tabsRoot = document.getElementById('tabs');
+    const tabButtons = [...document.querySelectorAll('.tab-btn')];
+    const tabPanels = [...document.querySelectorAll('.tab-panel')];
+    const editBtn = document.getElementById('editDrugBtn');
+
+    const slug = getQueryParam('slug');
+
+    function validateSlug(s) {
+      return typeof s === 'string' && /^[a-z0-9-]+$/.test(s);
+    }
+
+    function selectTab(id) {
+      tabButtons.forEach(btn => {
+        const active = btn.getAttribute('aria-controls') === id;
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      tabPanels.forEach(panel => {
+        panel.hidden = panel.id !== id;
+      });
+    }
+
+    function setupTabs() {
+      tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectTab(btn.getAttribute('aria-controls'));
+        });
+      });
+
+      // Keyboard navigation
+      tabButtons.forEach((btn, idx) => {
+        btn.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            const next = tabButtons[(idx + 1) % tabButtons.length];
+            next.focus(); next.click();
+          } else if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            const prev = tabButtons[(idx - 1 + tabButtons.length) % tabButtons.length];
+            prev.focus(); prev.click();
+          }
+        });
+      });
+    }
+
+    function renderOverview(drug) {
+      // Description HTML (sanitized)
+      overviewDesc.innerHTML = safeHTML(drug.overview?.description || '<p>Không có mô tả.</p>');
+
+      // Composition display with new format
+      compTable.innerHTML = '';
+      const comp = drug.overview?.composition;
+      if (comp && comp.length > 0) {
+        const tbody = document.createElement('tbody');
+        const tr = document.createElement('tr');
+        const th = document.createElement('th'); th.textContent = 'Thành phần';
+        const td = document.createElement('td');
+        
+        // Create composition container
+        const compContainer = document.createElement('div');
+        compContainer.className = 'composition-container';
+        
+        comp.forEach(item => {
+          const compItem = document.createElement('div');
+          compItem.className = 'composition-item';
+          
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'composition-name';
+          nameSpan.textContent = item.name || item;
+          
+          const amountSpan = document.createElement('span');
+          amountSpan.className = 'composition-amount';
+          amountSpan.textContent = item.amount || '';
+          
+          compItem.appendChild(nameSpan);
+          compItem.appendChild(amountSpan);
+          compContainer.appendChild(compItem);
+        });
+        
+        td.appendChild(compContainer);
+        tr.append(th, td); 
+        tbody.appendChild(tr);
+        compTable.appendChild(tbody);
+      } else {
+        compTable.innerHTML = '<tbody><tr><td>—</td></tr></tbody>';
+      }
+
+      // Indication
+      indicationList.innerHTML = '';
+      (drug.overview?.indication || []).forEach(i => {
+        const li = document.createElement('li'); li.textContent = i; indicationList.appendChild(li);
+      });
+      if (!indicationList.children.length) indicationList.innerHTML = '<li>—</li>';
+
+      // Contraindication
+      contraList.innerHTML = '';
+      (drug.overview?.contraindication || []).forEach(i => {
+        const li = document.createElement('li'); li.textContent = i; contraList.appendChild(li);
+      });
+      if (!contraList.children.length) contraList.innerHTML = '<li>—</li>';
+    }
+
+    function renderImages(drug) {
+      gallery.innerHTML = '';
+      const images = Array.isArray(drug.images) ? drug.images : [];
+      const urls = [drug.image, ...images.filter(Boolean)];
+      urls.forEach(u => {
+        if (!u) return;
+        const img = document.createElement('img');
+        img.src = u;
+        img.alt = '';
+        img.loading = 'lazy';
+        gallery.appendChild(img);
+      });
+    }
+
+        async function loadDrug() {
+      if (!validateSlug(slug)) {
+        throw new Error('Invalid slug');
+      }
+      const snap = await get(child(ref(db), `drugs/${slug}`));
+      if (!snap.exists()) {
+        throw new Error('Not found');
+      }
+      return snap.val();
+    }
+
+    function clearSkeleton() {
+      [overviewDesc, compTable, indicationList, contraList, gallery]
+        .forEach(el => el.classList.remove('skeleton'));
+      const headerEls = [nameEl, catEl];
+      headerEls.forEach(el => el.classList.remove('skeleton', 'skeleton-text'));
+      const hero = imgEl.closest('.hero-image');
+      hero && hero.classList.remove('skeleton');
+      imgEl.style.opacity = '1';
+    }
+
+    backBtn.addEventListener('click', () => {
+      // Check if we came from search page
+      if (document.referrer && document.referrer.includes('search.html')) {
+        history.back();
+      } else {
+        // Go to search page as default
+        window.location.href = './search.html';
+      }
+    });
+
+    // Initialize the detail page
+    (async function init() {
+      setupTabs();
+      try {
+        const drug = await loadDrug();
+        nameEl.textContent = drug.name || 'Thuốc';
+        catEl.textContent = drug.tags ? drug.tags.join(', ') : '—';
+        // Show edit button for admin convenience
+        if (editBtn && slug) {
+          editBtn.href = `./add_data.html?slug=${encodeURIComponent(slug)}`;
+          editBtn.hidden = false;
+        }
+        if (drug.image) {
+          imgEl.src = drug.image;
+          imgEl.alt = drug.name || '';
+          imgEl.addEventListener('load', () => {
+            const hero = imgEl.closest('.hero-image');
+            hero && hero.classList.remove('skeleton');
+            imgEl.style.opacity = '1';
+          });
+        }
+        console.log('Loaded drug data:', drug);
+        renderOverview(drug);
+        renderImages(drug);
+        clearSkeleton();
+        // Default to overview
+        selectTab('tab-overview');
+        document.title = `${drug.name} - Tra cứu thuốc y tế`;
+      } catch (err) {
+        console.error(err);
+        errorBox.hidden = false;
+        // Hide skeletons
+        clearSkeleton();
+        nameEl.textContent = 'Không tìm thấy';
+        catEl.textContent = '';
+      }
+    })();
+  </script>
+</body>
+</html>

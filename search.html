@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tìm kiếm thuốc - TRUNG TÂM Y TẾ KHU VỰC TAM NÔNG</title>
+    <link rel="icon" href="img/logo.png" type="image/png">
+    <link rel="shortcut icon" href="img/logo.png" type="image/png">
+    <style>
+        /* Reset và base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+
+        /* Header với logo */
+        .header {
+            background: white;
+            padding: 15px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            height: 50px;
+            width: auto;
+        }
+
+        .back-btn {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: #3367d6;
+            transform: translateY(-1px);
+        }
+
+        /* Search section */
+        .search-section {
+            background: white;
+            padding: 40px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .search-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .search-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: white;
+            border-radius: 50px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 0 20px;
+            transition: box-shadow 0.3s ease;
+            margin-bottom: 30px;
+        }
+
+        .search-box:hover {
+            box-shadow: 0 6px 25px rgba(0,0,0,0.15);
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 15px 20px;
+            font-size: 16px;
+            background: transparent;
+            color: #333;
+        }
+
+        .search-input::placeholder {
+            color: #999;
+        }
+
+        .search-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            color: #4285f4;
+            transition: all 0.3s ease;
+            border-radius: 50%;
+        }
+
+        .search-button:hover {
+            background: rgba(66, 133, 244, 0.1);
+            color: #1a73e8;
+            transform: scale(1.1);
+        }
+
+        /* Results section */
+        .results-section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .results-header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .results-count {
+            color: #666;
+            font-size: 16px;
+        }
+
+        /* Drug cards */
+        .drug-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        .drug-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .drug-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            flex-shrink: 0;
+            background: #f0f0f0;
+        }
+
+        .drug-content {
+            flex: 1;
+        }
+
+        .drug-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .drug-tags {
+            margin-bottom: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tag {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .tag:hover {
+            background: #1976d2;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .drug-description {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+            max-height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+
+        /* No results */
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .no-results-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4285f4;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Floating Add Button */
+        .floating-add-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 20px;
+            border-radius: 50px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .floating-add-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
+            color: white;
+            text-decoration: none;
+        }
+
+        .floating-add-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .floating-add-btn svg {
+            flex-shrink: 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .drug-card {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .drug-image {
+                width: 100px;
+                height: 100px;
+                margin: 0 auto;
+            }
+
+            .drug-content {
+                text-align: left;
+            }
+
+            .search-container {
+                padding: 0 10px;
+            }
+
+            .results-section {
+                padding: 10px;
+            }
+
+            .floating-add-btn {
+                bottom: 20px;
+                right: 20px;
+                padding: 14px 18px;
+                font-size: 13px;
+            }
+
+            .floating-add-btn span {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <img src="img/logo.png" alt="Logo" class="logo">
+            <a href="index.html" class="back-btn">← Trang chủ</a>
+        </div>
+    </div>
+
+    <!-- Search section -->
+    <div class="search-section">
+        <div class="search-container">
+            <div class="search-box">
+                <input type="text" placeholder="Tìm kiếm thuốc..." class="search-input" id="searchInput">
+                <button class="search-button" id="searchButton">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 21L16.514 16.506L21 21ZM19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results section -->
+    <div class="results-section">
+        <div class="results-header">
+            <h2 id="resultsTitle">Tất cả thuốc</h2>
+            <p class="results-count" id="resultsCount">Đang tải...</p>
+        </div>
+
+        <div id="resultsContainer">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Đang tải danh sách thuốc...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Add Drug Button -->
+    <a href="add_data.html" class="floating-add-btn" id="floatingAddBtn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Thêm thuốc</span>
+    </a>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+        import { getDatabase } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
+        import { ref as dbRef, get, child } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDqdWux9ISGgG9dJIz_BuUTg2akiUYM14c",
+            authDomain: "tracuuyte-7061a.firebaseapp.com",
+            databaseURL: "https://tracuuyte-7061a-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "tracuuyte-7061a",
+            storageBucket: "tracuuyte-7061a.firebasestorage.app",
+            messagingSenderId: "837205769673",
+            appId: "1:837205769673:web:45371c7b8f5efce4b1fc18",
+            measurementId: "G-69TJE53D20"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const resultsTitle = document.getElementById('resultsTitle');
+        const resultsCount = document.getElementById('resultsCount');
+
+        let allDrugs = [];
+        let filteredDrugs = [];
+
+        // Load all drugs from database
+        async function loadAllDrugs() {
+            try {
+                const snap = await get(child(dbRef(db), 'drug_names'));
+                if (snap.exists()) {
+                    allDrugs = Object.entries(snap.val()).map(([slug, drug]) => ({
+                        slug,
+                        ...drug
+                    }));
+                    filteredDrugs = [...allDrugs];
+                    displayResults();
+                } else {
+                    showNoResults('Chưa có thuốc nào trong hệ thống');
+                }
+            } catch (error) {
+                console.error('Error loading drugs:', error);
+                showNoResults('Lỗi khi tải danh sách thuốc');
+            }
+        }
+
+        // Display search results
+        function displayResults() {
+            resultsContainer.innerHTML = '';
+            
+            if (filteredDrugs.length === 0) {
+                showNoResults('Không tìm thấy thuốc nào');
+                return;
+            }
+
+            resultsTitle.textContent = filteredDrugs.length === allDrugs.length ? 'Tất cả thuốc' : 'Kết quả tìm kiếm';
+            resultsCount.textContent = `${filteredDrugs.length} thuốc`;
+
+            filteredDrugs.forEach(drug => {
+                const drugCard = createDrugCard(drug);
+                resultsContainer.appendChild(drugCard);
+            });
+        }
+
+        // Create drug card element
+        function createDrugCard(drug) {
+            const card = document.createElement('div');
+            card.className = 'drug-card';
+            
+            const imageUrl = drug.image || 'img/logo.png';
+            const tags = Array.isArray(drug.tags) ? drug.tags : [];
+            const description = drug.description || 'Chưa có mô tả chi tiết.';
+            
+            card.innerHTML = `
+                <img src="${imageUrl}" alt="${drug.name}" class="drug-image" onerror="this.src='img/logo.png'">
+                <div class="drug-content">
+                    <div class="drug-name">${drug.name}</div>
+                    <div class="drug-tags">
+                        ${tags.map(tag => `<button class="tag" onclick="filterByTag('${tag}')">${tag}</button>`).join('')}
+                    </div>
+                    <div class="drug-description">${description}</div>
+                </div>
+            `;
+
+            card.addEventListener('click', () => {
+                // Navigate to drug detail page
+                window.location.href = `drug.html?slug=${drug.slug}`;
+            });
+
+            return card;
+        }
+
+        // Show no results message
+        function showNoResults(message) {
+            resultsContainer.innerHTML = `
+                <div class="no-results">
+                    <div class="no-results-icon">🔍</div>
+                    <h3>${message}</h3>
+                    <p>Hãy thử tìm kiếm với từ khóa khác</p>
+                </div>
+            `;
+            resultsTitle.textContent = 'Không có kết quả';
+            resultsCount.textContent = '0 thuốc';
+        }
+
+        // Filter by tag
+        function filterByTag(tag) {
+            searchInput.value = tag;
+            performSearch();
+        }
+
+        // Make filterByTag globally accessible
+        window.filterByTag = filterByTag;
+
+        // Perform search
+        function performSearch() {
+            const query = searchInput.value.toLowerCase().trim();
+            
+            if (query === '') {
+                filteredDrugs = [...allDrugs];
+            } else {
+                filteredDrugs = allDrugs.filter(drug => {
+                    const name = drug.name.toLowerCase();
+                    const tags = Array.isArray(drug.tags) ? drug.tags.join(' ').toLowerCase() : '';
+                    return name.includes(query) || tags.includes(query);
+                });
+            }
+            
+            displayResults();
+        }
+
+        // Event listeners
+        searchInput.addEventListener('input', performSearch);
+        searchButton.addEventListener('click', performSearch);
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        // Initialize
+        loadAllDrugs();
+    </script>
+</body>
+</html>
