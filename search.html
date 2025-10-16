@@ -193,12 +193,24 @@
             cursor: pointer;
             transition: all 0.3s ease;
             border: none;
+            pointer-events: auto;
         }
 
         .tag:hover {
             background: #1976d2;
             color: white;
             transform: translateY(-1px);
+        }
+
+        .tag.active {
+            background: #1976d2;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(25, 118, 210, 0.4);
+        }
+
+        .tag.active:hover {
+            background: #1565c0;
         }
 
         .drug-description {
@@ -280,6 +292,34 @@
 
         .floating-add-btn svg {
             flex-shrink: 0;
+        }
+
+        /* Clear filter button */
+        .clear-filter-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+            margin-top: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .clear-filter-btn:hover {
+            background: linear-gradient(135deg, #ff5252 0%, #e53935 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+        }
+
+        .clear-filter-btn:active {
+            transform: translateY(0);
         }
 
         /* Responsive */
@@ -394,6 +434,7 @@
 
         let allDrugs = [];
         let filteredDrugs = [];
+        let selectedTags = [];
 
         // Load all drugs from database
         async function loadAllDrugs() {
@@ -447,13 +488,17 @@
                 <div class="drug-content">
                     <div class="drug-name">${drug.name}</div>
                     <div class="drug-tags">
-                        ${tags.map(tag => `<button class="tag" onclick="filterByTag('${tag}')">${tag}</button>`).join('')}
+                        ${tags.map(tag => `<button class="tag" onclick="event.stopPropagation(); filterByTag('${tag}')">${tag}</button>`).join('')}
                     </div>
                     <div class="drug-description">${description}</div>
                 </div>
             `;
 
-            card.addEventListener('click', () => {
+            card.addEventListener('click', (e) => {
+                // Don't navigate if clicking on a tag
+                if (e.target.classList.contains('tag') || e.target.closest('.tag')) {
+                    return;
+                }
                 // Navigate to drug detail page
                 window.location.href = `drug.html?slug=${drug.slug}`;
             });
@@ -476,8 +521,112 @@
 
         // Filter by tag
         function filterByTag(tag) {
-            searchInput.value = tag;
-            performSearch();
+            // Clear any existing search
+            searchInput.value = '';
+            
+            // Toggle tag selection
+            if (selectedTags.includes(tag)) {
+                // Remove tag from selection
+                selectedTags = selectedTags.filter(t => t !== tag);
+            } else {
+                // Add tag to selection
+                selectedTags.push(tag);
+            }
+            
+            // Filter drugs by selected tags
+            if (selectedTags.length === 0) {
+                // Show all drugs if no tags selected
+                filteredDrugs = [...allDrugs];
+                resultsTitle.textContent = 'Tất cả thuốc';
+            } else {
+                // Filter drugs that have ALL selected tags
+                filteredDrugs = allDrugs.filter(drug => {
+                    const tags = Array.isArray(drug.tags) ? drug.tags : [];
+                    return selectedTags.every(selectedTag => tags.includes(selectedTag));
+                });
+                
+                // Update UI to show tag filter
+                resultsTitle.textContent = `Thuốc có tag: ${selectedTags.join(', ')}`;
+            }
+            
+            resultsCount.textContent = `${filteredDrugs.length} thuốc`;
+            
+            // Display results
+            displayResults();
+            
+            // Add visual feedback
+            showTagFilterActive();
+        }
+
+        // Show tag filter active state
+        function showTagFilterActive() {
+            // Remove existing active tag indicators
+            document.querySelectorAll('.tag.active').forEach(tag => {
+                tag.classList.remove('active');
+            });
+            
+            // Add active class to selected tags
+            document.querySelectorAll('.tag').forEach(tag => {
+                if (selectedTags.includes(tag.textContent)) {
+                    tag.classList.add('active');
+                }
+            });
+            
+            // Show clear filter button
+            showClearFilterButton();
+        }
+        
+        // Show clear filter button
+        function showClearFilterButton() {
+            // Remove existing clear button
+            const existingClearBtn = document.getElementById('clearFilterBtn');
+            if (existingClearBtn) {
+                existingClearBtn.remove();
+            }
+            
+            // Only show button if there are selected tags
+            if (selectedTags.length === 0) {
+                return;
+            }
+            
+            // Create clear filter button with selected tags
+            const clearBtn = document.createElement('button');
+            clearBtn.id = 'clearFilterBtn';
+            clearBtn.className = 'clear-filter-btn';
+            clearBtn.innerHTML = `❌ Xóa tất cả tag thuốc (${selectedTags.join(', ')})`;
+            clearBtn.onclick = clearTagFilter;
+            
+            // Insert after search box
+            const searchContainer = document.querySelector('.search-container');
+            searchContainer.appendChild(clearBtn);
+        }
+        
+        // Clear tag filter
+        function clearTagFilter() {
+            // Clear selected tags
+            selectedTags = [];
+            
+            // Reset to show all drugs
+            filteredDrugs = [...allDrugs];
+            searchInput.value = '';
+            
+            // Update UI
+            resultsTitle.textContent = 'Tất cả thuốc';
+            resultsCount.textContent = `${filteredDrugs.length} thuốc`;
+            
+            // Remove active states
+            document.querySelectorAll('.tag.active').forEach(tag => {
+                tag.classList.remove('active');
+            });
+            
+            // Remove clear button
+            const clearBtn = document.getElementById('clearFilterBtn');
+            if (clearBtn) {
+                clearBtn.remove();
+            }
+            
+            // Display all results
+            displayResults();
         }
 
         // Make filterByTag globally accessible
@@ -487,16 +636,31 @@
         function performSearch() {
             const query = searchInput.value.toLowerCase().trim();
             
+            // Clear tag filter when searching by text
+            if (query !== '') {
+                selectedTags = [];
+                document.querySelectorAll('.tag.active').forEach(tag => {
+                    tag.classList.remove('active');
+                });
+                const clearBtn = document.getElementById('clearFilterBtn');
+                if (clearBtn) {
+                    clearBtn.remove();
+                }
+            }
+            
             if (query === '') {
                 filteredDrugs = [...allDrugs];
+                resultsTitle.textContent = 'Tất cả thuốc';
             } else {
                 filteredDrugs = allDrugs.filter(drug => {
                     const name = drug.name.toLowerCase();
                     const tags = Array.isArray(drug.tags) ? drug.tags.join(' ').toLowerCase() : '';
                     return name.includes(query) || tags.includes(query);
                 });
+                resultsTitle.textContent = 'Kết quả tìm kiếm';
             }
             
+            resultsCount.textContent = `${filteredDrugs.length} thuốc`;
             displayResults();
         }
 
