@@ -1,0 +1,102 @@
+/* Zalo Floating Button Styles */
+.zalo-floating-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  text-decoration: none;
+  cursor: pointer;
+  outline: none;
+  transform: translateX(0);
+}
+
+.zalo-floating-btn:hover {
+  transform: translateY(-3px) scale(1.05);
+  text-decoration: none;
+}
+
+.zalo-floating-btn:active {
+  transform: translateY(-1px) scale(1.02);
+}
+
+.zalo-floating-btn img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  transition: all 0.3s ease;
+}
+
+.zalo-floating-btn:hover img {
+  transform: scale(1.1);
+}
+
+/* Scroll hide/show effect */
+.zalo-floating-btn.scroll-hidden {
+  transform: translateX(calc(100% + 30px));
+}
+
+.zalo-floating-btn.scroll-show {
+  transform: translateX(0);
+}
+
+/* Animation for the button */
+@keyframes zalo-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.zalo-floating-btn.animate {
+  animation: zalo-pulse 2s infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .zalo-floating-btn {
+    width: 50px;
+    height: 50px;
+    bottom: 20px;
+    left: 20px;
+  }
+  
+  .zalo-floating-btn svg {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* Special positioning for search page to avoid overlap with add button */
+.search-page .zalo-floating-btn {
+  bottom: 100px; /* Move up to avoid overlap with add button */
+}
+
+@media (max-width: 768px) {
+  .search-page .zalo-floating-btn {
+    bottom: 90px;
+  }
+}
+
+/* JavaScript scroll detection styles */
+.zalo-floating-btn.scrolling {
+  transform: translateX(calc(100% + 30px));
+  transition: transform 0.3s ease;
+}
+
+.zalo-floating-btn.stopped {
+  transform: translateX(0);
+  transition: transform 0.5s ease;
+}

@@ -6,6 +6,7 @@
     <title>Tìm kiếm thuốc - TRUNG TÂM Y TẾ KHU VỰC TAM NÔNG</title>
     <link rel="icon" href="img/logo.png" type="image/png">
     <link rel="shortcut icon" href="img/logo.png" type="image/png">
+    <link rel="stylesheet" href="zalo-button.css">
     <style>
         /* Reset và base styles */
         * {
@@ -360,7 +361,7 @@
         }
     </style>
 </head>
-<body>
+<body class="search-page">
     <!-- Header -->
     <div class="header">
         <div class="header-content">
@@ -405,6 +406,13 @@
         </svg>
         <span>Thêm thuốc</span>
     </a>
+
+    <!-- Zalo Floating Button -->
+    <a href="https://zalo.me/0982166897" target="_blank" class="zalo-floating-btn" title="Liên hệ qua Zalo">
+        <img src="img/zalo.webp" alt="Zalo" />
+    </a>
+    
+    <script src="zalo-scroll.js"></script>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
